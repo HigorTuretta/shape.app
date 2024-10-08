@@ -1,10 +1,10 @@
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom'
 import Home from '@/pages/Home'
 import Login from '@/pages/Login'
-import FichaTreino from '@/pages/FichaTreino'
 import CadastrarExercicio from '@/pages/CadastrarExercicio'
 import { auth } from '@/firebaseConfig'
 import { useEffect, useState } from 'react'
+import AdicionarTreino from '@/pages/AdicionarTreino'
 
 const AppRoutes = () => {
   const [user, setUser] = useState(null)
@@ -26,8 +26,9 @@ const AppRoutes = () => {
     <Router>
       <Routes>
         <Route path="/" element={user ? <Home /> : <Navigate to="/login" />} />
+        <Route path="/home" element={user ? <Home /> : <Navigate to="/login" />} />
         <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
-        <Route path="/ficha-treino" element={user ? <FichaTreino /> : <Navigate to="/login" />} />
+        <Route path="/adicionar-treino" element={user ? <AdicionarTreino /> : <Navigate to="/login" />} />
         <Route path="/cadastrar-exercicio" element={user ? <CadastrarExercicio /> : <Navigate to="/login" />} />
       </Routes>
     </Router>

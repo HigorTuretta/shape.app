@@ -1,54 +1,97 @@
-import React from 'react'
-import { auth } from '@/firebaseConfig'
-import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import { useNavigate } from 'react-router-dom'
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { getDocs, query, collection, where, updateDoc, doc } from "firebase/firestore";
+import { db, auth } from "@/firebaseConfig";
+import UserProfileCard from "@/components/CustomCards/UserProfileCard";
+import WorkoutSummaryCard from "@/components/CustomCards/WorkoutSummaryCard";
+import WeeklyWorkoutCalendar from "@/components/CustomCards/WeeklyWorkoutCalendar";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 const Home = () => {
-  const user = auth.currentUser
-  const navigate = useNavigate()
+  const [treinoAtivo, setTreinoAtivo] = useState(null);
+  const [progresso, setProgresso] = useState(0);
+  const [diasCompletados, setDiasCompletados] = useState(0);
+  const [totalDias, setTotalDias] = useState(0);
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
-  const handleFichaTreino = () => {
-    navigate('/ficha-treino')
-  }
+  // Função para buscar o treino ativo
+  useEffect(() => {
+    const fetchTreinoAtivo = async () => {
+      const user = auth.currentUser;
+      if (user) {
+        const q = query(collection(db, "treinos"), where("uid", "==", user.uid), where("ativo", "==", true));
+        const querySnapshot = await getDocs(q);
 
-  const handleAdicionarExercicio = () => {
-    navigate('/cadastrar-exercicio')
-  }
+        if (!querySnapshot.empty) {
+          const treino = querySnapshot.docs[0].data(); // Pegamos o primeiro treino ativo encontrado
+          setTreinoAtivo({ ...treino, id: querySnapshot.docs[0].id });
+          setTotalDias(calculateTotalDays(treino.intervaloDias)); // Calcula o total de dias do treino
+        }
+      }
+    };
+    fetchTreinoAtivo();
+  }, []);
+
+  // Função para calcular o total de dias do intervalo de treino
+  const calculateTotalDays = (intervaloDias) => {
+    const start = new Date(intervaloDias[0].startDate);
+    const end = new Date(intervaloDias[0].endDate);
+    const diffTime = Math.abs(end - start);
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+  };
+
+  // Função para ativar/desativar a ficha de treino
+  const handleToggleTreinoAtivo = async (checked) => {
+    if (treinoAtivo) {
+      try {
+        await updateDoc(doc(db, "treinos", treinoAtivo.id), { ativo: checked });
+        setTreinoAtivo((prev) => ({ ...prev, ativo: checked }));
+        toast({
+          title: checked ? "Treino ativado" : "Treino desativado",
+          description: `O treino foi ${checked ? "ativado" : "desativado"} com sucesso!`,
+        });
+      } catch (error) {
+        toast({
+          title: "Erro",
+          description: "Não foi possível atualizar o treino.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  // Função para calcular o progresso de dias completados
+  const handleDiaCompletado = (dia) => {
+    setDiasCompletados((prev) => prev + 1);
+    setProgresso(((diasCompletados + 1) / totalDias) * 100); // Atualiza o progresso
+  };
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center bg-cover bg-center"
-      style={{ backgroundImage: 'url(https://via.placeholder.com/1920x1080)' }}
-    >
-      <div className="bg-black bg-opacity-60 p-6 rounded-lg max-w-lg w-full">
-        <Card className="p-6 bg-white bg-opacity-80">
-          <h2 className="text-3xl font-bold mb-4 text-center text-gray-900">
-            Bem-vindo, {user?.displayName || 'Usuário'}!
-          </h2>
-          <p className="text-center text-gray-700 mb-6">Email: {user?.email}</p>
+    <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
+      <UserProfileCard name="Taylor" progressMessage="Hoje é mais um passo para se tornar a melhor versão de você mesmo!" />
 
-          <div className="flex flex-col space-y-4">
-            {/* Botão para ver a ficha de treino */}
-            <Button
-              className="w-full text-lg bg-blue-500 text-white hover:bg-blue-700"
-              onClick={handleFichaTreino}
-            >
-              Ver Ficha de Treino
-            </Button>
+      {treinoAtivo ? (
+        <WorkoutSummaryCard
+          nomeTreino={treinoAtivo.nomeTreino}
+          progress={progresso}
+          completedDays={diasCompletados}
+          totalDays={totalDias}
+          isActive={treinoAtivo.ativo}
+          onToggleActive={handleToggleTreinoAtivo}
+        />
+      ) : (
+        <div className="text-center text-gray-500">Nenhum treino ativo</div>
+      )}
 
-            {/* Botão para adicionar novo exercício */}
-            <Button
-              className="w-full text-lg bg-green-500 text-white hover:bg-green-700"
-              onClick={handleAdicionarExercicio}
-            >
-              Adicionar Exercício
-            </Button>
-          </div>
-        </Card>
-      </div>
+      <WeeklyWorkoutCalendar onDiaCompletado={handleDiaCompletado} />
+
+      <Button className="w-full bg-black text-white" onClick={() => navigate("/adicionar-treino")}>
+        + Adicionar Treino
+      </Button>
     </div>
-  )
-}
+  );
+};
 
-export default Home
+export default Home;
