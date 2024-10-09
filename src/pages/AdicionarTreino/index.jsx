@@ -12,6 +12,7 @@ import DatePicker from "react-datepicker"; // Importando o DatePicker
 import "react-datepicker/dist/react-datepicker.css"; // Importando os estilos
 import { addDays } from "date-fns";
 import { ptBR } from "date-fns/locale"; // Importando locale para pt-BR
+import { Switch } from "@/components/ui/switch"; // Switch estilizado
 
 const diasSemana = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
@@ -23,6 +24,7 @@ const CadastrarTreino = () => {
   const [restDays, setRestDays] = useState([]); // Dias de descanso
   const [startDate, setStartDate] = useState(new Date()); // Data de início do intervalo
   const [endDate, setEndDate] = useState(addDays(new Date(), 7)); // Data de fim do intervalo
+  const [ativo, setAtivo] = useState(true); // Estado do treino (ativo ou não)
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -86,6 +88,7 @@ const CadastrarTreino = () => {
         exercises: selectedExercises,
         restDays,
         interval: { start: startDate, end: endDate },
+        ativo, // Incluindo o campo ativo no cadastro
         uid: user.uid,
       });
 
@@ -105,22 +108,18 @@ const CadastrarTreino = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-6">
+    <div className="bg-gray-100 min-h-screen p-4 space-y-4">
       <motion.div
         initial={{ opacity: 0, translateY: 20 }}
         animate={{ opacity: 1, translateY: 0 }}
-        className="w-full max-w-2xl p-8 bg-white rounded-lg shadow-md"
+        className="space-y-6"
       >
-        <div className="flex items-center mb-6">
-          {/* Ícone de voltar ao lado do título */}
-          <Button
-            variant="ghost"
-            onClick={() => navigate(-1)}
-            className="mr-4"
-          >
+        {/* Header com ícone de voltar */}
+        <div className="flex items-center">
+          <Button variant="ghost" onClick={() => navigate(-1)} className="p-2">
             <ArrowLeftIcon className="w-6 h-6 text-gray-700" />
           </Button>
-          <h2 className="text-3xl font-bold">Cadastrar Ficha de Treino</h2>
+          <h2 className="text-3xl font-bold ml-2">Cadastrar Ficha de Treino</h2>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -135,7 +134,7 @@ const CadastrarTreino = () => {
           </div>
 
           {/* Intervalo de Dias */}
-          <div className="mt-6">
+          <div className="mt-4">
             <label className="text-lg font-medium mb-2 block">Intervalo de Dias:</label>
             <div className="flex items-center gap-4">
               <DatePicker
@@ -144,8 +143,8 @@ const CadastrarTreino = () => {
                 selectsStart
                 startDate={startDate}
                 endDate={endDate}
-                dateFormat="dd/MM/yyyy" // Formato brasileiro
-                locale={ptBR} // Localização em português
+                dateFormat="dd/MM/yyyy"
+                locale={ptBR}
                 className="border p-2 rounded"
               />
               <span>até</span>
@@ -156,25 +155,23 @@ const CadastrarTreino = () => {
                 startDate={startDate}
                 endDate={endDate}
                 minDate={startDate}
-                dateFormat="dd/MM/yyyy" // Formato brasileiro
-                locale={ptBR} // Localização em português
+                dateFormat="dd/MM/yyyy"
+                locale={ptBR}
                 className="border p-2 rounded"
               />
             </div>
           </div>
 
           {/* Seleção de Dias da Semana */}
-          <div className="mt-6">
+          <div className="mt-4">
             <label className="text-lg font-medium mb-2 block">Dias da Semana:</label>
             <div className="flex gap-3 flex-wrap">
               {diasSemana.map((day, index) => (
                 <motion.button
                   key={index}
                   whileHover={{ scale: 1.05 }}
-                  type="button" // Definindo o tipo como button para evitar o envio do form
-                  className={`p-3 border rounded-lg w-16 ${
-                    selectedDay === index ? "bg-blue-200" : "bg-gray-100"
-                  } ${restDays.includes(index) ? "bg-red-200" : ""}`}
+                  type="button"
+                  className={`p-3 border rounded-lg w-16 ${selectedDay === index ? "bg-blue-200" : "bg-gray-100"} ${restDays.includes(index) ? "bg-red-200" : ""}`}
                   onClick={() => setSelectedDay(index)}
                 >
                   {day}
@@ -183,19 +180,15 @@ const CadastrarTreino = () => {
             </div>
           </div>
 
-          {/* Opção de marcar como descanso */}
-          <div className="mt-6">
+          {/* Marcar como descanso */}
+          <div className="mt-4">
             <Button
               variant="outline"
-              type="button" // Evitar submissão do formulário ao clicar no botão
+              type="button"
               onClick={() => toggleRestDay(selectedDay)}
-              className={`w-full ${
-                restDays.includes(selectedDay) ? "bg-red-200" : "bg-green-100"
-              }`}
+              className={`w-full ${restDays.includes(selectedDay) ? "bg-red-200" : "bg-green-100"}`}
             >
-              {restDays.includes(selectedDay)
-                ? "Remover Descanso"
-                : "Marcar como Descanso"}
+              {restDays.includes(selectedDay) ? "Remover Descanso" : "Marcar como Descanso"}
             </Button>
           </div>
 
@@ -213,11 +206,7 @@ const CadastrarTreino = () => {
                     <motion.div
                       key={exercise.id}
                       whileHover={{ scale: 1.05 }}
-                      className={`p-3 border rounded-lg cursor-pointer min-w-32 ${
-                        selectedExercises[selectedDay]?.includes(exercise.id)
-                          ? "bg-green-100"
-                          : "bg-gray-100"
-                      }`}
+                      className={`p-3 border rounded-lg cursor-pointer ${selectedExercises[selectedDay]?.includes(exercise.id) ? "bg-green-100" : "bg-gray-100"}`}
                       onClick={() => toggleExercise(exercise.id)}
                     >
                       <span className="font-medium">{exercise.nome}</span>
@@ -228,6 +217,15 @@ const CadastrarTreino = () => {
               )}
             </div>
           )}
+
+          {/* Toggle Ativo com Switch */}
+          <div className="mt-6">
+            <label className="text-lg font-medium mb-2 block">Ativar Treino?</label>
+            <div className="flex items-center">
+              <Switch checked={ativo} onCheckedChange={(checked) => setAtivo(checked)} />
+              <span className="ml-2 text-gray-700">{ativo ? "Ativo" : "Desativado"}</span>
+            </div>
+          </div>
 
           {/* Botão para cadastrar treino */}
           <Button type="submit" className="w-full p-3 bg-blue-600 text-white rounded-lg">

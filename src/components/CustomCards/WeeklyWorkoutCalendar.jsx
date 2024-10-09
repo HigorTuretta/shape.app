@@ -53,10 +53,10 @@ const WeeklyWorkoutCalendar = () => {
             onClick={() => handleDayClick(index)}
             className={`flex-shrink-0 flex flex-col items-center justify-center w-28 h-32 bg-white shadow-md rounded-xl cursor-pointer transition duration-300 ${
               isDayCompleted(index)
-                ? "bg-green-500 text-black hover:bg-green-600" // Texto preto quando concluído
+                ? "bg-green-500 text-black hover:bg-green-300" // Texto preto quando concluído
                 : index === currentDay
-                ? "bg-red-500 text-white hover:bg-red-600" // Dia atual em vermelho com texto branco
-                : "bg-gray-100 text-black hover:bg-gray-300" // Dias normais
+                ? "bg-red-500 text-black hover:bg-green-200" // Dia atual em vermelho com texto branco
+                : "bg-gray-100 text-black hover:bg-green-200" // Dias normais
             }`}
           >
             <div

@@ -7,42 +7,47 @@ import WorkoutSummaryCard from "@/components/CustomCards/WorkoutSummaryCard";
 import WeeklyWorkoutCalendar from "@/components/CustomCards/WeeklyWorkoutCalendar";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { motion } from "framer-motion";
+import { differenceInDays, parseISO, format } from "date-fns";
 
 const Home = () => {
   const [treinoAtivo, setTreinoAtivo] = useState(null);
+  const [treinosDesativados, setTreinosDesativados] = useState([]); // Para armazenar os treinos desativados
   const [progresso, setProgresso] = useState(0);
   const [diasCompletados, setDiasCompletados] = useState(0);
   const [totalDias, setTotalDias] = useState(0);
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Função para buscar o treino ativo
   useEffect(() => {
-    const fetchTreinoAtivo = async () => {
+    const fetchTreinos = async () => {
       const user = auth.currentUser;
       if (user) {
-        const q = query(collection(db, "treinos"), where("uid", "==", user.uid), where("ativo", "==", true));
-        const querySnapshot = await getDocs(q);
+        const qAtivos = query(collection(db, "treinos"), where("uid", "==", user.uid), where("ativo", "==", true));
+        const qDesativados = query(collection(db, "treinos"), where("uid", "==", user.uid), where("ativo", "==", false));
 
-        if (!querySnapshot.empty) {
-          const treino = querySnapshot.docs[0].data(); // Pegamos o primeiro treino ativo encontrado
-          setTreinoAtivo({ ...treino, id: querySnapshot.docs[0].id });
-          setTotalDias(calculateTotalDays(treino.intervaloDias)); // Calcula o total de dias do treino
+        const [treinoAtivoSnapshot, treinosDesativadosSnapshot] = await Promise.all([getDocs(qAtivos), getDocs(qDesativados)]);
+
+        if (!treinoAtivoSnapshot.empty) {
+          const treino = treinoAtivoSnapshot.docs[0].data();
+          setTreinoAtivo({ ...treino, id: treinoAtivoSnapshot.docs[0].id });
+          const totalDiasTreino = calculateTotalDays(treino.interval.start, treino.interval.end);
+          setTotalDias(totalDiasTreino);
         }
+
+        const desativados = treinosDesativadosSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+        setTreinosDesativados(desativados);
       }
     };
-    fetchTreinoAtivo();
+    fetchTreinos();
   }, []);
 
-  // Função para calcular o total de dias do intervalo de treino
-  const calculateTotalDays = (intervaloDias) => {
-    const start = new Date(intervaloDias[0].startDate);
-    const end = new Date(intervaloDias[0].endDate);
-    const diffTime = Math.abs(end - start);
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+  const calculateTotalDays = (start, end) => {
+    const startDate = parseISO(start);
+    const endDate = parseISO(end);
+    return differenceInDays(endDate, startDate) + 1;
   };
 
-  // Função para ativar/desativar a ficha de treino
   const handleToggleTreinoAtivo = async (checked) => {
     if (treinoAtivo) {
       try {
@@ -62,19 +67,24 @@ const Home = () => {
     }
   };
 
-  // Função para calcular o progresso de dias completados
   const handleDiaCompletado = (dia) => {
     setDiasCompletados((prev) => prev + 1);
-    setProgresso(((diasCompletados + 1) / totalDias) * 100); // Atualiza o progresso
+    setProgresso(((diasCompletados + 1) / totalDias) * 100);
+  };
+
+  const isToday = (day) => {
+    const today = format(new Date(), "EEEEEE").toLowerCase();
+    return today.startsWith(day.toLowerCase());
   };
 
   return (
-    <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
-      <UserProfileCard name="Taylor" progressMessage="Hoje é mais um passo para se tornar a melhor versão de você mesmo!" />
+    <div className="min-h-screen p-4 bg-gray-100 space-y-4">
+      {/* Perfil e Treino Ativo */}
+      <UserProfileCard name="Taylor" progressMessage="Continue evoluindo!" />
 
       {treinoAtivo ? (
         <WorkoutSummaryCard
-          nomeTreino={treinoAtivo.nomeTreino}
+          nomeTreino={treinoAtivo.nome}
           progress={progresso}
           completedDays={diasCompletados}
           totalDays={totalDias}
@@ -85,9 +95,29 @@ const Home = () => {
         <div className="text-center text-gray-500">Nenhum treino ativo</div>
       )}
 
-      <WeeklyWorkoutCalendar onDiaCompletado={handleDiaCompletado} />
+      {/* Calendário */}
+      <WeeklyWorkoutCalendar onDiaCompletado={handleDiaCompletado} highlightToday={isToday} />
 
-      <Button className="w-full bg-black text-white" onClick={() => navigate("/adicionar-treino")}>
+      {/* Treinos Desativados */}
+      {treinosDesativados.length > 0 && (
+        <div>
+          <h3 className="text-xl font-semibold text-gray-800">Treinos Desativados</h3>
+          {treinosDesativados.map((treino) => (
+            <WorkoutSummaryCard
+              key={treino.id}
+              nomeTreino={treino.nome}
+              isActive={false}
+              onToggleActive={() => handleToggleTreinoAtivo(true)}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Botão Flutuante */}
+      <Button
+        className="fixed bottom-6 right-6 bg-blue-600 hover:bg-blue-500 text-white p-4 rounded-full shadow-xl"
+        onClick={() => navigate("/adicionar-treino")}
+      >
         + Adicionar Treino
       </Button>
     </div>
